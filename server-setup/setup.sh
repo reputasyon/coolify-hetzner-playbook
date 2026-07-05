@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Coolify Production Playbook — server hardening script
-# https://github.com/YOUR_GITHUB_USER/coolify-production-playbook
+# https://github.com/reputasyon/coolify-production-playbook
 #
 # Interactive and idempotent: asks before each module, skips anything already
 # configured, and is safe to re-run. Read the whole file before running —

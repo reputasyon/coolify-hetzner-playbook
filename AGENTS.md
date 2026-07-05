@@ -16,7 +16,7 @@ You (an AI coding agent) have been pointed at this repo to help a user run Cooli
 | User asks for | Start at |
 |---------------|----------|
 | "Harden / prepare my server" | `server-setup/setup.sh` (read it, then run module by module) |
-| "Set up CI/CD / auto-deploy" | `.github/workflows/deploy.yml` + `docs/cloudflare-bot-fight.md` |
+| "Set up CI/CD / auto-deploy" | `templates/deploy.yml` (copy into the user's repo as `.github/workflows/deploy.yml`) + `docs/cloudflare-bot-fight.md` |
 | "Deploys stopped working / webhook fails" | `docs/cloudflare-bot-fight.md` |
 | "Disk full / site down / no space" | `docs/disk-cleanup.md` (emergency section first) |
 | "Only deploy what changed in my monorepo" | `docs/selective-monorepo-deploy.md` |

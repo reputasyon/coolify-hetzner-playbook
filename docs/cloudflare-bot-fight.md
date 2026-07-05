@@ -40,7 +40,7 @@ curl -sf http://localhost:8000/api/v1/version -H "Authorization: Bearer $COOLIFY
 
 3. **Add GitHub secrets** (repo → Settings → Secrets → Actions): `SSH_HOST`, `SSH_PRIVATE_KEY` (contents of `coolify_deploy`), `COOLIFY_TOKEN`, `COOLIFY_APP_UUID`.
 
-4. **Use the deploy step** (full workflow: [`deploy.yml`](../.github/workflows/deploy.yml)):
+4. **Use the deploy step** (full workflow: [`deploy.yml`](../templates/deploy.yml)):
 
    ```yaml
    - name: Deploy

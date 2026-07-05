@@ -21,7 +21,7 @@ We deliberately did **not** ship a CLI. You already have one: your assistant. Re
 | Path | What it is |
 |------|------------|
 | [`server-setup/setup.sh`](server-setup/setup.sh) | Interactive, idempotent hardening script: swap, Docker log rotation, 3-tier disk cleanup crons |
-| [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Battle-tested CI/CD: test → selective monorepo deploy → Coolify API over SSH |
+| [`templates/deploy.yml`](templates/deploy.yml) | Battle-tested CI/CD: test → selective monorepo deploy → Coolify API over SSH |
 | [`docker/`](docker/) | Split Dockerfiles for a Node monorepo (API + static web) with the "why two apps" rationale |
 | [`docs/`](docs/) | Deep dives: every problem we hit, why it happens, how to fix it permanently |
 | [`docs/incidents/`](docs/incidents/) | Real production incidents, anonymized — what broke, what it cost, what we changed |
@@ -42,7 +42,7 @@ Each of these cost us hours (sometimes days). Each has a doc with a permanent fi
 ### 1. Harden the server (after installing Coolify)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_GITHUB_USER/coolify-production-playbook/main/server-setup/setup.sh -o setup.sh
+curl -fsSL https://raw.githubusercontent.com/reputasyon/coolify-production-playbook/main/server-setup/setup.sh -o setup.sh
 less setup.sh   # always read scripts before running them — this one is short and commented
 sudo bash setup.sh
 ```
@@ -51,7 +51,7 @@ The script is **interactive** (asks before each module) and **idempotent** (safe
 
 ### 2. Set up CI/CD
 
-1. Copy [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) into your repo.
+1. Copy [`templates/deploy.yml`](templates/deploy.yml) into your repo as `.github/workflows/deploy.yml`. (It lives in `templates/` here so it doesn't execute in *this* repo.)
 2. Follow the `# CHANGE ME` comments (path filters, workspace names).
 3. Add the four secrets:
 

@@ -21,7 +21,7 @@ Bilerek CLI yazmadık. Zaten bir CLI'n var: asistanın. Okunabilir bash + açık
 | Yol | Nedir |
 |-----|-------|
 | [`server-setup/setup.sh`](server-setup/setup.sh) | İnteraktif, idempotent sıkılaştırma script'i: swap, Docker log rotation, 3 kademeli disk temizlik cron'ları |
-| [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Production'da kanıtlanmış CI/CD: test → seçici monorepo deploy → SSH üzerinden Coolify API |
+| [`templates/deploy.yml`](templates/deploy.yml) | Production'da kanıtlanmış CI/CD: test → seçici monorepo deploy → SSH üzerinden Coolify API |
 | [`docker/`](docker/) | Node monorepo için ayrık Dockerfile'lar (API + statik web) ve "neden iki app" gerekçesi |
 | [`docs/`](docs/) | Derin dalışlar: yaşadığımız her problem, neden olduğu, kalıcı çözümü |
 | [`docs/incidents/`](docs/incidents/) | Gerçek production kazaları (anonimleştirilmiş) — ne bozuldu, neye mal oldu, ne değiştirdik |

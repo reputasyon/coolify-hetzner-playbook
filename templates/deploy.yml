@@ -1,5 +1,5 @@
 # Coolify Production Playbook — CI/CD template
-# https://github.com/YOUR_GITHUB_USER/coolify-production-playbook
+# https://github.com/reputasyon/coolify-production-playbook
 #
 # Flow: push to main → test → detect what changed → deploy ONLY the changed
 # service, by calling the Coolify API over SSH (works even when Cloudflare

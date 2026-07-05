@@ -17,7 +17,7 @@ Does your CI touch a real database anywhere? If tests are mock-based (fast, good
 
 ## Apply
 
-In your test job (full workflow: [`deploy.yml`](../.github/workflows/deploy.yml)):
+In your test job (full workflow: [`deploy.yml`](../templates/deploy.yml)):
 
 ```yaml
 services:

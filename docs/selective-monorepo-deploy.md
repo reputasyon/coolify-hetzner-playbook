@@ -39,7 +39,7 @@ Look at your current workflow: does it deploy unconditionally, or diff with `HEA
 
 ## Apply
 
-Use the `changes` job from [`deploy.yml`](../.github/workflows/deploy.yml). Rules for the path filters:
+Use the `changes` job from [`deploy.yml`](../templates/deploy.yml). Rules for the path filters:
 
 - **Shared files go in every filter.** Root `package.json`, the lockfile, shared configs — a dependency bump must redeploy everything that uses it.
 - **Migrations belong in the API filter** (or whichever service runs them at startup).
