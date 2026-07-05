@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Coolify Production Playbook — server hardening script
-# https://github.com/reputasyon/coolify-production-playbook
+# https://github.com/reputasyon/coolify-hetzner-playbook
 #
 # Interactive and idempotent: asks before each module, skips anything already
 # configured, and is safe to re-run. Read the whole file before running —
@@ -79,7 +79,8 @@ echo
 # 3. 3-tier disk cleanup — Docker build cache is the other disk killer.
 #    Tier 1 (daily 03:00):   builder prune >24h old        — routine hygiene
 #    Tier 2 (every 6h, >70%): system prune + old images    — pressure valve
-#    Tier 3 (hourly, >85%):  prune -a --volumes (dangling) — keep site alive
+#    Tier 3 (hourly, >85%):  prune -af (unused images too) — keep site alive
+#    No tier touches volumes — volumes hold databases. Never auto-prune volumes.
 # ---------------------------------------------------------------------------
 CRON_FILE=/etc/cron.d/docker-cleanup
 if [ -f "$CRON_FILE" ]; then

@@ -1,4 +1,4 @@
-# Coolify Production Playbook
+# Coolify + Hetzner Production Playbook
 
 **Installing Coolify takes 10 minutes. Running it in production for a year is the hard part.**
 
@@ -30,6 +30,7 @@ We deliberately did **not** ship a CLI. You already have one: your assistant. Re
 
 Each of these cost us hours (sometimes days). Each has a doc with a permanent fix:
 
+0. **[Which Hetzner server, and what around it](docs/hetzner-server-guide.md)** — CX vs CCX vs ARM, the Cloud Firewall rules that keep Coolify's admin ports off the internet, and the two backup layers you actually need.
 1. **[Cloudflare blocks your GitHub deploy webhooks](docs/cloudflare-bot-fight.md)** — Bot Fight Mode silently blocks GitHub's IPs. Fix: trigger Coolify's API over SSH from Actions. The #1 recurring question in Coolify communities.
 2. **[Your disk fills up and the site goes down](docs/disk-cleanup.md)** — Docker build cache + logs eat an 80GB disk in months. Fix: 3-tier automated cleanup (daily prune / >70% aggressive / >85% nuclear) + `daemon.json` log rotation.
 3. **[Every push redeploys everything in your monorepo](docs/selective-monorepo-deploy.md)** — Fix: path-filtered deploys using the full push range (`github.event.before`, not `HEAD~1` — most examples get this wrong).
@@ -42,7 +43,7 @@ Each of these cost us hours (sometimes days). Each has a doc with a permanent fi
 ### 1. Harden the server (after installing Coolify)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/reputasyon/coolify-production-playbook/main/server-setup/setup.sh -o setup.sh
+curl -fsSL https://raw.githubusercontent.com/reputasyon/coolify-hetzner-playbook/main/server-setup/setup.sh -o setup.sh
 less setup.sh   # always read scripts before running them — this one is short and commented
 sudo bash setup.sh
 ```
@@ -53,14 +54,14 @@ The script is **interactive** (asks before each module) and **idempotent** (safe
 
 1. Copy [`templates/deploy.yml`](templates/deploy.yml) into your repo as `.github/workflows/deploy.yml`. (It lives in `templates/` here so it doesn't execute in *this* repo.)
 2. Follow the `# CHANGE ME` comments (path filters, workspace names).
-3. Add the four secrets:
+3. Add the secrets (names must match the template):
 
 | Secret | What it is |
 |--------|------------|
 | `SSH_HOST` | Your server's IP |
 | `SSH_PRIVATE_KEY` | A deploy-only SSH key (`ssh-keygen -t ed25519`) |
 | `COOLIFY_TOKEN` | Coolify → Keys & Tokens → API tokens |
-| `COOLIFY_APP_UUID` | From the app's URL in the Coolify dashboard (one secret per app) |
+| `COOLIFY_API_UUID`, `COOLIFY_WEB_UUID` | Each app's UUID, from its URL in the Coolify dashboard — one secret per service; rename to match yours |
 
 ### 3. Read the incident reports
 
@@ -74,7 +75,7 @@ Seriously — [docs/incidents/](docs/incidents/) is the highest-value part of th
 - **Node.js monorepo** (npm workspaces): Hono API + React/Vite web, PostgreSQL
 - **GitHub Actions** for CI/CD
 
-Nothing here is Hetzner-specific — any VPS provider works. The Node monorepo parts generalize to any stack; the server-setup and deploy patterns are stack-agnostic.
+Only [the server guide](docs/hetzner-server-guide.md) is Hetzner-specific — everything else works on any VPS provider. The Node monorepo parts generalize to any stack; the server-setup and deploy patterns are stack-agnostic.
 
 ## Contributing
 

@@ -1,4 +1,4 @@
-# Coolify Production Playbook 🇹🇷
+# Coolify + Hetzner Production Playbook 🇹🇷
 
 **Coolify kurmak 10 dakika. Onu bir yıl boyunca production'da işletmek asıl mesele.**
 
@@ -28,6 +28,7 @@ Bilerek CLI yazmadık. Zaten bir CLI'n var: asistanın. Okunabilir bash + açık
 
 ## Bu reponun çözdüğü problemler
 
+0. **[Hangi Hetzner sunucusu ve etrafında ne lazım](docs/hetzner-server-guide.md)** — CX vs CCX vs ARM seçimi, Coolify'ın admin portlarını internete kapatan Cloud Firewall kuralları ve gereken iki katmanlı backup.
 1. **[Cloudflare, GitHub deploy webhook'larını engelliyor](docs/cloudflare-bot-fight.md)** — Bot Fight Mode GitHub IP'lerini sessizce bloklar. Çözüm: Actions'tan SSH ile Coolify API tetikleme.
 2. **[Disk dolup site düşüyor](docs/disk-cleanup.md)** — Docker build cache + loglar 80GB'ı aylar içinde yer. Çözüm: 3 kademeli otomatik temizlik + log rotation.
 3. **[Monorepo'da her push her şeyi deploy ediyor](docs/selective-monorepo-deploy.md)** — Çözüm: `github.event.before` ile tam push aralığında path-filtreli deploy (`HEAD~1` değil — çoğu örnek bunu yanlış yapar).

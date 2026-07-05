@@ -49,7 +49,7 @@ curl -sf http://localhost:8000/api/v1/version -H "Authorization: Bearer $COOLIFY
        COOLIFY_UUID: ${{ secrets.COOLIFY_APP_UUID }}
      run: |
        ssh -i ~/.ssh/deploy_key root@${{ secrets.SSH_HOST }} \
-         "curl -sf 'http://localhost:8000/api/v1/deploy?uuid=${COOLIFY_UUID}&force=true' -H 'Authorization: Bearer ${COOLIFY_TOKEN}'"
+         "curl -sf 'http://localhost:8000/api/v1/deploy?uuid=${COOLIFY_UUID}' -H 'Authorization: Bearer ${COOLIFY_TOKEN}'"
    ```
 
 ## Verify
@@ -61,6 +61,27 @@ Push a commit to `main` (or run the workflow manually) and watch:
 
 ## Notes
 
-- `force=true` skips Coolify's "did the commit change?" check — you already gated the deploy in CI.
-- Keep the SSH key **deploy-only**: if you want to harden further, restrict it in `authorized_keys` with `command="..."` to only allow the curl.
+- Appending `&force=true` forces a **no-cache rebuild**. Don't make it your default — it slows every deploy and throws away the build cache. Reserve it for when a stale cached layer is actively causing a bad build.
 - This pattern also survives Cloudflare "Under Attack" mode, WAF rules, and any future edge blocking — CI traffic never touches the edge.
+
+## Harden further (optional but cheap)
+
+The basic setup gives CI a root SSH key that can run anything. Two upgrades close most of that exposure:
+
+**1. Forced command** — pin the key to the deploy curl in `authorized_keys`, so even a leaked key can only trigger deploys:
+
+```
+command="curl -sf \"http://localhost:8000/api/v1/deploy?uuid=$SSH_ORIGINAL_COMMAND\" -H \"Authorization: Bearer YOUR_COOLIFY_TOKEN\"",no-port-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA... github-actions-deploy
+```
+
+The workflow then sends only the UUID: `ssh -i ~/.ssh/deploy_key root@$HOST "$COOLIFY_UUID"`. The token lives on the server, never in CI. (A dedicated non-root user works too, but with a forced command the account's privileges barely matter.)
+
+**2. Pin the host key** — `ssh-keyscan` on every run is trust-on-first-use, every time; a MITM between GitHub and your server could intercept it. Instead, capture once and store as a secret:
+
+```bash
+ssh-keyscan -H YOUR_SERVER_IP        # run locally, put output in secret SSH_KNOWN_HOSTS
+```
+
+```yaml
+- run: echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts   # instead of ssh-keyscan
+```

@@ -1,5 +1,5 @@
 # Coolify Production Playbook — CI/CD template
-# https://github.com/reputasyon/coolify-production-playbook
+# https://github.com/reputasyon/coolify-hetzner-playbook
 #
 # Flow: push to main → test → detect what changed → deploy ONLY the changed
 # service, by calling the Coolify API over SSH (works even when Cloudflare
@@ -113,7 +113,11 @@ jobs:
       # Why SSH → localhost instead of calling the Coolify API/webhook directly:
       # Cloudflare Bot Fight Mode blocks GitHub's IP ranges, so public webhooks
       # silently fail. From inside the server, localhost:8000 bypasses Cloudflare
-      # entirely. See docs/cloudflare-bot-fight.md for the full story.
+      # entirely. See docs/cloudflare-bot-fight.md for the full story (including
+      # optional hardening: forced-command deploy key + pinned host key).
+      #
+      # Tip: appending &force=true forces a no-cache rebuild — slower, and it
+      # defeats the build cache. Only use it when a stale cached layer bites.
       - name: Deploy API
         if: needs.changes.outputs.api == 'true'
         env:
@@ -121,7 +125,7 @@ jobs:
           COOLIFY_UUID: ${{ secrets.COOLIFY_API_UUID }}
         run: |
           ssh -i ~/.ssh/deploy_key root@${{ secrets.SSH_HOST }} \
-            "curl -sf 'http://localhost:8000/api/v1/deploy?uuid=${COOLIFY_UUID}&force=true' -H 'Authorization: Bearer ${COOLIFY_TOKEN}'"
+            "curl -sf 'http://localhost:8000/api/v1/deploy?uuid=${COOLIFY_UUID}' -H 'Authorization: Bearer ${COOLIFY_TOKEN}'"
 
       - name: Deploy Web
         if: needs.changes.outputs.web == 'true'
@@ -130,7 +134,7 @@ jobs:
           COOLIFY_UUID: ${{ secrets.COOLIFY_WEB_UUID }}
         run: |
           ssh -i ~/.ssh/deploy_key root@${{ secrets.SSH_HOST }} \
-            "curl -sf 'http://localhost:8000/api/v1/deploy?uuid=${COOLIFY_UUID}&force=true' -H 'Authorization: Bearer ${COOLIFY_TOKEN}'"
+            "curl -sf 'http://localhost:8000/api/v1/deploy?uuid=${COOLIFY_UUID}' -H 'Authorization: Bearer ${COOLIFY_TOKEN}'"
 
       - name: Cleanup
         if: always()

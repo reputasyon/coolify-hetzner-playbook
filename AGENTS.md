@@ -15,6 +15,7 @@ You (an AI coding agent) have been pointed at this repo to help a user run Cooli
 
 | User asks for | Start at |
 |---------------|----------|
+| "Which server / firewall / backups (Hetzner)" | `docs/hetzner-server-guide.md` |
 | "Harden / prepare my server" | `server-setup/setup.sh` (read it, then run module by module) |
 | "Set up CI/CD / auto-deploy" | `templates/deploy.yml` (copy into the user's repo as `.github/workflows/deploy.yml`) + `docs/cloudflare-bot-fight.md` |
 | "Deploys stopped working / webhook fails" | `docs/cloudflare-bot-fight.md` |
