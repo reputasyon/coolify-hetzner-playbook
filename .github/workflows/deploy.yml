@@ -1,0 +1,137 @@
+# Coolify Production Playbook — CI/CD template
+# https://github.com/YOUR_GITHUB_USER/coolify-production-playbook
+#
+# Flow: push to main → test → detect what changed → deploy ONLY the changed
+# service, by calling the Coolify API over SSH (works even when Cloudflare
+# Bot Fight Mode blocks GitHub's IPs — see docs/cloudflare-bot-fight.md).
+#
+# Required secrets (repo → Settings → Secrets and variables → Actions):
+#   SSH_HOST            server IP
+#   SSH_PRIVATE_KEY     deploy-only key; public half in server's authorized_keys
+#   COOLIFY_TOKEN       Coolify → Keys & Tokens → API tokens
+#   COOLIFY_API_UUID    the API app's UUID (from its Coolify dashboard URL)
+#   COOLIFY_WEB_UUID    the web app's UUID
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # fetch-depth: 0 is REQUIRED. A push can contain multiple commits;
+          # diffing HEAD~1 only sees the last one and mis-detects changes.
+          # We diff the full push range via github.event.before instead.
+          fetch-depth: 0
+
+      - id: filter
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "api=true" >> $GITHUB_OUTPUT
+            echo "web=true" >> $GITHUB_OUTPUT
+          else
+            BEFORE_SHA="${{ github.event.before }}"
+            # First push to a branch or force push: before is all zeros → fall back to HEAD~1
+            if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE_SHA="HEAD~1"
+            fi
+            # CHANGE ME: adjust the path filters to your monorepo layout.
+            # Shared files (root package.json, lockfile, shared Dockerfiles) belong in BOTH filters.
+            API_CHANGED=$(git diff --name-only "$BEFORE_SHA" HEAD -- api/ migrations/ package.json package-lock.json Dockerfile.api | head -1)
+            WEB_CHANGED=$(git diff --name-only "$BEFORE_SHA" HEAD -- web/ package.json package-lock.json Dockerfile.web | head -1)
+            echo "api=$( [ -n "$API_CHANGED" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+            echo "web=$( [ -n "$WEB_CHANGED" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+          fi
+
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    # A fresh PostgreSQL so the FULL migration chain runs in CI.
+    # A broken migration fails here instead of boot-looping production.
+    # (Remove this block if you don't use SQL migrations — see docs/migration-smoke-test.md)
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'   # CHANGE ME: or node-version: '24'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # CHANGE ME: replace with your migration command (or delete with the services block)
+      - name: Migration smoke test (fresh DB)
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/app_test
+        run: npm run migrate -w api
+
+      # CHANGE ME: your test & build commands
+      - run: npm run test -w api
+      - run: npm run test -w web
+      - run: npm run build -w api
+      - run: npm run build -w web
+
+  deploy:
+    name: Deploy
+    needs: [test, changes]
+    if: github.ref == 'refs/heads/main' && (needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      # Why SSH → localhost instead of calling the Coolify API/webhook directly:
+      # Cloudflare Bot Fight Mode blocks GitHub's IP ranges, so public webhooks
+      # silently fail. From inside the server, localhost:8000 bypasses Cloudflare
+      # entirely. See docs/cloudflare-bot-fight.md for the full story.
+      - name: Deploy API
+        if: needs.changes.outputs.api == 'true'
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_UUID: ${{ secrets.COOLIFY_API_UUID }}
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SSH_HOST }} \
+            "curl -sf 'http://localhost:8000/api/v1/deploy?uuid=${COOLIFY_UUID}&force=true' -H 'Authorization: Bearer ${COOLIFY_TOKEN}'"
+
+      - name: Deploy Web
+        if: needs.changes.outputs.web == 'true'
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_UUID: ${{ secrets.COOLIFY_WEB_UUID }}
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SSH_HOST }} \
+            "curl -sf 'http://localhost:8000/api/v1/deploy?uuid=${COOLIFY_UUID}&force=true' -H 'Authorization: Bearer ${COOLIFY_TOKEN}'"
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

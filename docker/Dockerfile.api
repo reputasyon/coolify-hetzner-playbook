@@ -1,0 +1,52 @@
+# API service — one of TWO separate Coolify apps (see docs/two-apps-two-dockerfiles.md
+# for why bundling API+web in one container took our whole site down).
+#
+# Node monorepo (npm workspaces) with workspaces: api/ and web/
+#
+# node:24-slim (Debian/glibc), not alpine: some native modules ship glibc-only
+# binaries (e.g. onnxruntime-node) and fail on musl with ERR_DLOPEN_FAILED.
+# If all your deps are pure JS, alpine is fine and smaller.
+
+# === Build stage ===
+FROM node:24-slim AS build
+
+WORKDIR /app
+
+# Copy root + workspace manifests first so `npm ci` is cached until deps change
+COPY package.json package-lock.json ./
+COPY api/package.json ./api/
+COPY web/package.json ./web/
+
+# devDependencies are needed to build (tsc etc.)
+ENV NODE_ENV=development
+RUN npm ci
+
+COPY tsconfig.json ./
+COPY api/ ./api/
+
+# Migration SQL files — the migration runner applies these at API startup
+COPY migrations/ ./migrations/
+
+RUN npm run build -w api
+
+# === Production stage ===
+FROM node:24-slim
+
+ENV NODE_ENV=production
+WORKDIR /app
+
+# Production deps only
+COPY package.json package-lock.json ./
+COPY api/package.json ./api/
+COPY web/package.json ./web/
+RUN npm ci --omit=dev --workspace=api --include-workspace-root
+
+COPY --from=build /app/api/dist ./api/dist
+
+# Migrations must ALSO be copied into the production stage — forgetting this
+# line means the runner finds no files and prod silently skips migrations.
+COPY --from=build /app/migrations ./migrations
+
+EXPOSE 3001
+
+CMD ["node", "api/dist/index.js"]
